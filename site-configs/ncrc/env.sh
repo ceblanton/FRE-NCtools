@@ -43,7 +43,7 @@ module load nccmp/1.8.6.5
 setenv PATH=${PATH}:/ncrc/home2/Seth.Underwood/opt/bats/0.4.0/bin
 
 # **********************************************************************
-# Set environment variablesSetup and Load the Modules
+# Set environment variables
 # **********************************************************************
 setenv MPICH_UNEX_BUFFER_SIZE=256m
 setenv MPICH_MAX_SHORT_MSG_SIZE=64000
@@ -51,3 +51,6 @@ setenv MPICH_PTL_UNEX_EVENTS=160k
 setenv KMP_STACKSIZE=2g
 setenv F_UFMTENDIAN=big
 setenv NC_BLKSZ=64K
+
+# Set CONFIG_SITE to the correct config.site file for the system
+setenv CONFIG_SITE=$( dirname $(readlink -f $0) )/config.site
