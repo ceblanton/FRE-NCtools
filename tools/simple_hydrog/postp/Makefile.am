@@ -1,14 +1,27 @@
+#***********************************************************************
+#                   GNU Lesser General Public License
+#
+# This file is part of the GFDL FRE NetCDF tools package (FRE-NCTools).
+#
+# FRE-NCTools is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or (at
+# your option) any later version.
+#
+# FRE-NCTools is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with FRE-NCTools.  If not, see
+# <http://www.gnu.org/licenses/>.
+#***********************************************************************
 bin_PROGRAMS = cp_river_vars
 
-AM_CFLAGS = -I$(top_srcdir)/tools/libfrencutils \
-            $(NETCDF_CFLAGS)
+AM_FCFLAGS = $(FC_DEFAULT_REAL_KIND8_FLAG) $(NETCDF_FCFLAGS)
 
-AM_FCFLAGS =  -I$(top_srcdir)/tools/libfrencutils \
-            $(FC_DEFAULT_REAL_KIND8_FLAG) $(NETCDF_FCFLAGS)
-
-LDADD = $(NETCDF_LDFLAGS) $(NETCDF_LIBS) -lnetcdff -lnetcdf -lhdf5_hl  -lhdf5 -lz -ldl
+LDADD = $(NETCDF_FCLDFLAGS) $(NETCDF_FCLIBS) 
 
 cp_river_vars_SOURCES = cp_river_vars.f90  
-
-cp_river_vars_LDADD = $(top_builddir)/tools/libfrencutils/libfrencutils.a $(LDADD)
  

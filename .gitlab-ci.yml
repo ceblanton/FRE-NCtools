@@ -10,12 +10,12 @@ variables:
   CONFIG_SITE: ${CI_PROJECT_DIR}/site-configs/${FRE_SITE}/config.site
 .buildScript: &buildScript
   script:
-    - . ${CI_PROJECT_DIR}/site-configs/${FRE_SITE}/env.sh
+    - eval `${CI_PROJECT_DIR}/site-configs/${FRE_SITE}/env.sh`
     - autoreconf -i
     - mkdir ${buildDir}
     - cd ${buildDir}
     - ../configure --prefix=${FMS_HOME}/local/opt/fre-nctools/test/${FRE_SITE}
-    - make -j
+    - make
     - make -j check
   artifacts:
     expire_in: 1 month
@@ -25,7 +25,7 @@ variables:
 .deployScript: &deployScript
   script:
     - cd ${CI_PROJECT_DIR}
-    - . ${CI_PROJECT_DIR}/site-configs/${FRE_SITE}/env.sh
+    - eval `${CI_PROJECT_DIR}/site-configs/${FRE_SITE}/env.sh`
     - autoreconf -i
     - cd ${CI_PROJECT_DIR}/${buildDir}
     - make install
