@@ -31,16 +31,18 @@
 . $( dirname $( dirname $(readlink -f $0) ) )/env_functions.sh
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+# Add bats to PATH
+# Needed for testing
+# This must currently be before the module loads
+# as the PATH is resolved too soon
+setenv PATH=${PATH}:/ncrc/home2/Seth.Underwood/opt/bats/0.4.0/bin
+
 module rm PrgEnv-pgi PrgEnv-intel PrgEnv-gnu PrgEnv-cray
 module load PrgEnv-intel/6.0.5
 module swap intel intel/18.0.6.288 
 module load cray-netcdf/4.6.3.2
 module load cray-hdf5/1.10.5.2
 module load nccmp/1.8.6.5
-
-# Add bats to PATH
-# Needed for testing
-setenv PATH=${PATH}:/ncrc/home2/Seth.Underwood/opt/bats/0.4.0/bin
 
 # **********************************************************************
 # Set environment variables
