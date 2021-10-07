@@ -71,7 +71,7 @@ load test_utils
 
 # MPI only tests
 # This test only fails within the CI
-  if [ -z "$skip_mpi" && -z "$CI" ]; then
+  if [ -z "$skip_mpi" ] && [ -z "$CI" ]; then
       run command mpirun -n 2 make_topog_parallel \
 		--mosaic ocean_mosaic.nc \
 		--topog_type realistic \
