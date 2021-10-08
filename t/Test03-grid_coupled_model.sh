@@ -72,8 +72,8 @@ load test_utils
 
 # MPI only tests
 # This test only fails within the CI
-  if [ -z "$skip_mpi" && -z "$CI" ]; then
-      run command mpirun -n 2 make_topog_parallel \
+  if [ -z "$skip_mpi"] && [ -z "$CI" ]; then
+      mpirun -n 2 make_topog_parallel \
 		--mosaic ocean_mosaic.nc \
 		--topog_type realistic \
 		--topog_file OCCAM_p5degree.nc \
@@ -81,10 +81,8 @@ load test_utils
 		--scale_factor -1 \
 		--vgrid ocean_vgrid.nc \
 		--output topog_parallel.nc
-      [ "$status" -eq 0 ]
 
-      run command nccmp -md topog.nc topog_parallel.nc
-      [ "$status" -eq 0 ]
+      nccmp -md topog.nc topog_parallel.nc
   fi
 
 
