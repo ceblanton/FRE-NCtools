@@ -124,7 +124,7 @@ run command make_solo_mosaic  \
   [ "$status" -eq 0 ]
 
 # MPI only
-  if [ -z "$skip_mpi" && -z "$CI" ]; then
+  if [ -z "$skip_mpi" ] && [ -z "$CI" ]; then
       #make the coupler_mosaic
       mpirun -n 2 make_coupler_mosaic_parallel --atmos_mosaic atmos_mosaic.nc \
                          --land_mosaic land_mosaic.nc --ocean_mosaic ocean_mosaic.nc \
@@ -140,6 +140,6 @@ run command make_solo_mosaic  \
       nccmp -md --exclude=atm_mosaic_dir --exclude=lnd_mosaic_dir --exclude=ocn_mosaic_dir \
                 --exclude=ocn_topog_dir grid_spec.nc ../grid_spec.nc
   fi
+[ 1 -eq 0 ]
 }
 
-false

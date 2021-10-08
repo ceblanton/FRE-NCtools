@@ -114,7 +114,7 @@ load test_utils
   [ "$status" -eq 0 ]
 
 #Make coupler mosaic with parallel
-  if [ -z "$skip_mpi" && -z "$CI" ]; then
+  if [ -z "$skip_mpi" ] && [ -z "$CI" ]; then
       [ ! -d parallel ] && mkdir parallel
       cd parallel
 
@@ -128,6 +128,6 @@ load test_utils
       nccmp -md --exclude=atm_mosaic_dir --exclude=lnd_mosaic_dir --exclude=ocn_mosaic_dir \
                 --exclude=ocn_topog_dir grid_spec.nc ../grid_spec.nc
   fi
+[ 1 -eq 0 ]
 }
 
-false
