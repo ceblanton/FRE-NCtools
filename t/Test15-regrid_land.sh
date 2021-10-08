@@ -1,4 +1,5 @@
 #!/usr/bin/env bats
+set -v
 
 #***********************************************************************
 #                   GNU Lesser General Public License
@@ -49,15 +50,14 @@ load test_utils
 
 # parallel call
   if [ -z "$skip_mpi" ]; then
-    run command fregrid_parallel \
+    fregrid_parallel \
 		--input_mosaic C180_mosaic.nc \
 		--interp_method conserve_order1 \
 		--nlon 144 \
 		--nlat 90 \
 		--remap_file remap_file.nc
-    [ "$status" -eq 0 ]
 
-    run command fregrid_parallel  \
+    fregrid_parallel  \
 		--input_mosaic C180_mosaic.nc  \
 		--interp_method conserve_order1  \
 		--nlon 144  \
@@ -66,8 +66,9 @@ load test_utils
 		--scalar_field soil_frac,lake_frac,glac_frac,area,soil_area,lake_area,glac_area  \
 		--output_file out.nc  \
 		--remap_file remap_file.nc
-    [ "$status" -eq 0 ]
   fi
+
+  false
 
 # remap other fields
 # Commented this part out because the input file is too large
