@@ -50,14 +50,14 @@ load test_utils
 
 # parallel call
   if [ -z "$skip_mpi" ]; then
-    fregrid_parallel \
+    mpirun -n 4 fregrid_parallel \
 		--input_mosaic C180_mosaic.nc \
 		--interp_method conserve_order1 \
 		--nlon 144 \
 		--nlat 90 \
 		--remap_file remap_file.nc
 
-    fregrid_parallel  \
+    mpirun -n 4 fregrid_parallel  \
 		--input_mosaic C180_mosaic.nc  \
 		--interp_method conserve_order1  \
 		--nlon 144  \
