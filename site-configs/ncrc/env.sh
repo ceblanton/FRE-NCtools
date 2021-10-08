@@ -37,6 +37,9 @@ module swap intel intel/18.0.6.288
 module load cray-netcdf/4.6.3.2
 module load cray-hdf5/1.10.5.2
 module load nccmp/1.8.6.5
+# Ocean model grid generator needs python3 with netCDF4 and numpy
+# Needed here for tests but also needs to be available when running
+module load PythonEnv-noaa/1.5.0
 
 # Add bats to PATH
 # Needed for testing

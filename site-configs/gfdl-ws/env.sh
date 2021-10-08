@@ -38,6 +38,7 @@ gcc_version=9.2.0
 ncc_version=4.7.3
 ncf_version=4.5.2
 mpi_version=3.3.2
+python_version=3.7.7
 
 # Ensure the base spack modules are first in MODULEPATH
 module remove-path MODULEPATH /app/spack/${env_version}/modulefiles/linux-rhel7-x86_64
@@ -59,6 +60,10 @@ module prepend-path MODULEPATH /app/spack/${env_version}/modulefiles-intel-${int
 module load netcdf-c/$ncc_version
 module load netcdf-fortran/$ncf_version
 module load mpich/$mpi_version
+
+# Ocean model grid generator needs python3 with netCDF4 and numpy
+# Needed here for tests but also needs to be available when running
+module load python/$python_version
 
 # Set CONFIG_SITE to the correct config.site file for the system
 setenv CONFIG_SITE $( dirname $(readlink -f $0) )/config.site
