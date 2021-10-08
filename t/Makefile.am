@@ -38,11 +38,11 @@ endif
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
              $(top_srcdir)/tap-driver.sh
 	
-TESTS = Test03-grid_coupled_model.sh \
-		Test04-grid_coupled_nest.sh \
-		Test15-regrid_land.sh
+#TESTS = Test03-grid_coupled_model.sh \
+#		Test04-grid_coupled_nest.sh \
+#		Test15-regrid_land.sh
 
-TESTS2 = Test01-check_programs_exist.sh \
+TESTS = Test01-check_programs_exist.sh \
         Test02-mppnccombine.sh \
         Test03-grid_coupled_model.sh \
         Test04-grid_coupled_nest.sh \
