@@ -10,7 +10,7 @@ variables:
   installLabel: ${CI_COMMIT_TAG:=$CI_COMMIT_BRANCH}
 .buildScript: &buildScript
   script:
-    - export
+    - if [[ -n ${CI_COMMIT_TAG} ]]; then installLabel=CI_COMMIT_TAG; else installLabel==$CI_COMMIT_BRANCH; fi
     - eval `${CI_PROJECT_DIR}/site-configs/${FRE_SITE}/env.sh`
     - autoreconf -i
     - mkdir ${buildDir}
