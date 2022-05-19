@@ -7,13 +7,14 @@ before_script:
 
 variables:
   buildDir: build.${FRE_SITE}.${CI_COMMIT_REF_SLUG}
+  installLabel: ${CI_COMMIT_TAG:=$CI_COMMIT_BRANCH}
 .buildScript: &buildScript
   script:
     - eval `${CI_PROJECT_DIR}/site-configs/${FRE_SITE}/env.sh`
     - autoreconf -i
     - mkdir ${buildDir}
     - cd ${buildDir}
-    - ../configure --prefix=${FMS_HOME}/local/opt/fre-nctools/test/${FRE_SITE}
+    - ../configure --prefix=${FMS_HOME}/local/opt/fre-nctools/${installLabel}/${FRE_SITE}
     - make
     - make -j check
   artifacts:
