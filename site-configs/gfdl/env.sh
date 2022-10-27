@@ -52,6 +52,9 @@ module load automake/1.16.3
 # Load the GCC compilers
 module load gcc/$gcc_version
 
+module load intel_compilers/2021.3.0
+module prepend-path MODULEPATH /app/spack/v0.17/modulefiles-intel-2021.5.0/linux-rhel7-x86_64
+
 # Load the GCC modules required for building
 module load netcdf-c/$ncc_version
 module load netcdf-fortran/$ncf_version
