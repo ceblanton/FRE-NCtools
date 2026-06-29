@@ -21,26 +21,32 @@
 # Prelude
 AC_PREREQ([2.63])
 AC_INIT(
-  [FRE NC Tools],
-  [2023.01],
-  [oar.gfdl.help@noaa.gov],
+  [FRE NCTools],
+  [2026.01],
+  [https://github.com/NOAA-GFDL/FRE-NCtools/issues],
   [fre-nctools],
   [https://github.com/NOAA-GFDL/FRE-NCtools])
 
-# Place the git description informatin in the configure script
+# Place the git description information in the configure script
 m4_define([git_revision],
-  [m4_esyscmd_s([git describe --always --dirty 2> /dev/null || echo "unknown version"])])
-AC_REVISION([$git_revision])
-
+  [m4_esyscmd_s([git describe --tags --always --dirty 2> /dev/null || echo "unknown version"])])
+AC_REVISION([git_revision])
 m4_define([git_hashval],
-  [m4_esyscmd_s([git rev-parse HEAD 2> /dev/null || echo "unknown githash"])])
-AC_REVISION([$git_hashval])
+  [m4_esyscmd_s([git rev-parse HEAD 2> /dev/null || echo "unknown git hash"])])
+AC_REVISION([git_hashval])
+m4_define([git_date],
+  [m4_esyscmd_s([git show --no-patch --format=%as HEAD 2> /dev/null || date +%Y-%m-%d])])
+AC_REVISION([git_date])
+m4_define([copyright_year],
+  [m4_substr(git_date, 0, 4)])
 
-AC_CONFIG_SRCDIR([postprocessing/land_utils/combine-ncc.F90])
+AC_CONFIG_SRCDIR([src/land_utils/combine-ncc.F90])
 AC_CONFIG_MACRO_DIR([m4])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 
-AM_INIT_AUTOMAKE([foreign -Wall -Werror -Woverride tar-ustar])
+# Remove -Werror from automake options until OS vendors brings in a newer
+# version of automake.
+AM_INIT_AUTOMAKE([foreign -Wall -Woverride tar-pax subdir-objects])
 AM_EXTRA_RECURSIVE_TARGETS([docs install-docs])
 
 # Check for programs
@@ -53,7 +59,7 @@ AC_ARG_ENABLE([quad-precision],
     [],
     [enable_quad_precision=no])
 
-AC_PROG_CC([icc gcc])
+AC_PROG_CC([icc gcc nvc])
 AM_PROG_CC_C_O
 ## When autoconf v2.70 is more available, this can be replaced with:
 ##AC_C__GENERIC
@@ -62,13 +68,15 @@ AS_IF([test $gx_cv_c__Generic = no],
   AC_MSG_ERROR([The C compiler does not support the generic selection C-11 standard.  Please use a C-11 compliant compiler.])
 )
 
-AC_PROG_FC([ifort gfortran])
+AC_PROG_FC([ifort gfortran nvfortran])
 AC_PROG_FC_C_O
 AC_FC_SRCEXT([f90])
 AC_FC_SRCEXT([F90])
 AC_FC_LINE_LENGTH([unlimited])
 AC_FC_FREEFORM()
 AC_FC_MODULE_EXTENSION()
+AC_FC_MODULE_FLAG()
+AC_FC_MODULE_OUTPUT_FLAG()
 GX_FC_DEFAULT_REAL_KIND8_FLAG()
 GX_FC_DEFAULT_REAL_KIND4_FLAG()
 
@@ -76,29 +84,41 @@ AC_SEARCH_LIBS([ceil],[m])
 
 # Check for the MPI compilers
 # Default MPI build is off
-build_mpi=no
 LX_FIND_MPI()
-AS_IF([test x"$with_mpi" = x"yes"],
-   [if test x"$have_C_mpi" = x"yes"; then
-      build_mpi="yes"
-    fi])
-AM_CONDITIONAL([WITH_MPI], [test x"$build_mpi" = x"yes"])
-AM_CONDITIONAL([WITH_MPI_TESTS], [test x"$build_mpi" = x"yes" -a -z "$SKIP_MPI_TEST"])
+AS_IF([test x"$with_mpi" = x"yes" && test x"$have_C_mpi" = x"no"], [
+  AC_MSG_ERROR([MPI build requested but no MPI compiler found.])
+])
+AM_CONDITIONAL([WITH_MPI], [test x"$with_mpi" = x"yes"])
+AM_CONDITIONAL([WITH_MPI_TESTS], [test x"$with_mpi" = x"yes" && test -z "$SKIP_MPI_TEST"])
+
+# Build with OpenACC support.  Default is 'no'
+AC_ARG_ENABLE([gpu],
+  [AS_HELP_STRING([--enable-gpu],
+    [Builds with OpenACC. This will result in a second executable for fregrid, fregrid_gpu. (default no)])])
+AS_IF([test ${enable_gpu:-no} = yes],
+  [enable_gpu=yes],
+  [enable_gpu=no])
+# check compile flags
+AS_IF([test ${enable_gpu} = yes],
+      [GX_OPENACC_FLAGS()])
+AM_CONDITIONAL([ENABLE_GPU], [test "$enable_gpu" = "yes"])
 
 AC_CHECK_FUNCS(gettid, [], [])
 
 # Check if Fortran compiler has Cray pointer support
 GX_FC_CRAY_POINTER_FLAG()
 
+# Add Cray Pointer support flag
+AS_IF([test -n "$FC_CRAY_POINTER_FLAG"],
+  [FCFLAGS="$FCFLAGS $FC_CRAY_POINTER_FLAG"])
 
- # Add Cray Pointer support flag
-if test ! -z "$FC_CRAY_POINTER_FLAG"; then
-   FCFLAGS="$FCFLAGS $FC_CRAY_POINTER_FLAG"
-fi
-
+# Check for programs
+AC_PROG_GREP
+AC_PROG_EGREP
+AC_PROG_SED
 
 AC_CHECK_PROGS(ASCIIDOC, [asciidoc])
-if test -n "$ASCIIDOC"; then
+AS_IF([test -n "$ASCIIDOC"], [
   AC_MSG_CHECKING([for asciidoc version])
   asciidoc_version=`$ASCIIDOC --version 2>/dev/null`
   case "${asciidoc_version}" in
@@ -109,25 +129,74 @@ if test -n "$ASCIIDOC"; then
     AC_MSG_RESULT([${asciidoc_version} (unknown)])
     ;;
   esac
-fi
+])
 AM_CONDITIONAL([WITH_ASCIIDOC], [test -n "$ASCIIDOC"])
 
-AC_CHECK_PROGS(BATS, [bats])
-AC_CHECK_PROGS(PROVE, [prove])
+# Although these are supplied with the NetCDF C library, we'll double
+# check that ncgen and ncdump are available
+AC_ARG_VAR([NCGEN], [Path to ncgen])
+AC_PATH_PROG(NCGEN, [ncgen])
+AS_IF([test -z "$NCGEN"],
+  [AC_MSG_ERROR([Cannot find ncgen.  Please ensure ncgen is in PATH or set the environment variable NCGEN to the full path.])])
 
-AM_CONDITIONAL([WITH_CHECK_PROGS], [test -n "$PROVE" -a -n "$BATS"])
+AC_ARG_VAR([NCDUMP], [Path to ncdump])
+AC_PATH_PROG(NCDUMP, [ncdump])
+AS_IF([test -z "$NCDUMP"],
+  [AC_MSG_ERROR([Cannot find ncdump.  Please ensure ncdump is in PATH or set the environment variable NCDUMP to the full path.])])
+
+AC_ARG_VAR([NCRCAT], [Path to ncrcat])
+AC_PATH_PROG(NCRCAT, [ncrcat])
+AS_IF([test -z "$NCRCAT"],
+  [AC_MSG_ERROR([Cannot find ncrcat.  Please ensure ncrcat is in PATH or set the environment variable NCRCAT to the full path.])])
+
+AC_ARG_VAR([NCATTED], [Path to ncatted])
+AC_PATH_PROG(NCATTED, [ncatted])
+AS_IF([test -z "$NCATTED"],
+  [AC_MSG_ERROR([Cannot find ncatted.  Please ensure ncatted is in PATH or set the environment variable NCATTED to the full path.])])
+
+AC_ARG_VAR([NCKS], [Path to ncks])
+AC_PATH_PROG(NCKS, [ncks])
+AS_IF([test -z "$NCKS"],
+  [AC_MSG_ERROR([Cannot find ncks.  Please ensure ncks is in PATH or set the environment variable NCKS to the full path.])])
+
+AC_ARG_VAR([PERL], [Path to perl])
+AC_PATH_PROG(PERL, [perl])
+
+AX_PYTHON_MODULE([xarray],[],[python3])
+AM_CONDITIONAL([SKIP_XARRAY_TESTS], [test "${HAVE_PYMOD_XARRAY}" != yes])
+
+# Look for mpirun, mpiexec, srun application
+AC_ARG_VAR([MPIRUN], [Path to mpirun])
+AS_IF([test x"$with_mpi" = x"yes"], [
+  AC_CHECK_PROGS(MPIRUN, [srun aprun mpirun mpiexec])
+  AS_IF([test -z "$MPIRUN"],
+    [AC_MSG_WARN([Cannot find a suitable MPI launch application.  MPI tests will be skipped.])])
+])
+
+# Check if openacc.h exists
+AS_IF([test "$enable_gpu" = yes], [
+  AC_CHECK_HEADERS([openacc.h], [], [AC_MSG_ERROR([Cannot find OpenACC header file])])
+  AC_MSG_WARN([Currently only NVIDIA compilers are supported to compile with OpenACC in FRE-NCTOOLS])
+])
+
+# Check for getrusage.
+AC_CHECK_FUNCS([getrusage])
 
 # Check for library
 AX_LIB_NETCDF()
-if test "$with_netcdf" = "no"; then
-  AC_MSG_ERROR([Unable to find NetCDF c library.])
-fi
+AS_IF([test "$with_netcdf" = "no"],
+  [AC_MSG_ERROR([Unable to find NetCDF c library.])])
 
 AC_LANG_PUSH([Fortran])
 AX_LIB_NETCDFF()
-if test "$with_netcdf_fortran" = "no"; then
-  AC_MSG_ERROR([Unable to find NetCDF Fortran library.])
-fi
+AS_IF([test "$with_netcdf_fortran" = "no"],
+  [AC_MSG_ERROR([Unable to find NetCDF Fortran library.])])
+
+# Check if using an external libFMS library
+GX_LIB_FMS()
+AS_IF([test "$with_fms" = "no"],
+  [AC_MSG_NOTICE([Using the FRE-NCtools libfmslite])])
+AM_CONDITIONAL([WITHOUT_EXTERN_FMS], [test "$with_fms" = "no"])
 AC_LANG_POP([Fortran])
 
 # Check if Linux sched_getaffinity is available
@@ -137,10 +206,9 @@ AC_CHECK_FUNCS([sched_getaffinity], [], [])
 # Check if the C compiler supports a working `long double` with more range
 # or precision than `double`.
 AS_IF([test ${enable_quad_precision:-no} = yes], [
-AC_TYPE_LONG_DOUBLE_WIDER
-AS_IF([test $ac_cv_type_long_double_wider = no],
-  [AC_MSG_ERROR([system does not support quad precision.  Try setting --enable-mixed-precision=no])
-  ])
+  AC_TYPE_LONG_DOUBLE_WIDER
+  AS_IF([test $ac_cv_type_long_double_wider = no],
+    [AC_MSG_ERROR([system does not support quad precision.  Try setting --enable-mixed-precision=no])])
 ])
 
 # Check for library functions
@@ -148,68 +216,49 @@ AS_IF([test $ac_cv_type_long_double_wider = no],
 # Check if Test25-input link points to an existing directory
 AM_CONDITIONAL([HAVE_TEST25_INPUT], [test -e ${srcdir}/t/Test25-input/grid_spec.nc])
 
-# Other defs
-AC_DEFINE([GIT_REVISION], "git_revision",
-          [Holds the 'git describe' information if configure ran within a git working directory])
-AC_DEFINE([GIT_HEADHASH], "git_hashval",
-          [Holds the 'git rev-parse HEAD' information if configure ran within a git working directory])
+# Set macros
+AS_VAR_SET([GIT_REVISION], ["git_revision"])dnl
+AC_DEFINE([GIT_REVISION], ["git_revision"],
+          [Holds the 'git describe' information if configure ran within a git working directory])dnl
+AC_SUBST(GIT_REVISION)dnl
+AS_VAR_SET([GIT_HEADHASH], ["git_hashval"])dnl
+AC_DEFINE([GIT_HEADHASH], ["git_hashval"],
+          [Holds the 'git rev-parse HEAD' information if configure ran within a git working directory])dnl
+AC_SUBST(GIT_HEADHASH)dnl
+AS_VAR_SET([COPYRIGHT_YEAR], ["copyright_year"])dnl
+AC_DEFINE([COPYRIGHT_YEAR], ["copyright_year"],
+          [Year to place in Copyright notices printed with --version information])dnl
+AC_SUBST(COPYRIGHT_YEAR)dnl
 
-
-#Code for setting rpath based ncview's configure.in code.
-echo "ac_computer_gnu: $ac_compiler_gnu"
-if test x$ac_compiler_gnu = xyes; then
-	RPATH_FLAGS=""
-	for word in $NETCDF_LDFLAGS; do
-		if test `expr $word : -L/` -eq 3; then
-			RPDIR=${word:2}
-			RPATH_FLAGS="$RPATH_FLAGS -Wl,-rpath,$RPDIR"
-		fi
-	done
-  for word in $NETCDF_FCLDFLAGS; do
-		if test `expr $word : -L/` -eq 3; then
-			RPDIR=${word:2}
-			RPATH_FLAGS="$RPATH_FLAGS -Wl,-rpath,$RPDIR"
-		fi
-	done
-	AC_SUBST(RPATH_FLAGS)
-fi
-
+# cspell:ignore RPDIR RPATHFLAGS
+# Code for setting rpath based ncview's configure.in code.
+AS_IF([test x$ac_compiler_gnu = xyes], [RPATH_FLAGS=""
+  for word in $NETCDF_LDFLAGS $NETCDF_FCLDFLAGS
+  do
+    if test `expr $word : -L/` -eq 3
+    then
+      RPDIR=${word:2}
+      regex=".*$RPDIR.*"
+      if test `expr "$RPATH_FLAGS" : $regex` -eq 0
+      then
+        # RPDIR not in RPATH_FLAGS
+        RPATH_FLAGS="$RPATH_FLAGS -Wl,-rpath,$RPDIR"
+      fi
+    fi
+  done])
+AC_SUBST(RPATH_FLAGS)dnl
 
 # Output files
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile
-                 postprocessing/combine_restarts/Makefile
-                 postprocessing/iceberg_comb/Makefile
-                 postprocessing/land_utils/Makefile
-                 postprocessing/list_ncvars/Makefile
-                 postprocessing/mppnccombine/Makefile
-                 postprocessing/plevel/Makefile
-                 postprocessing/split_ncvars/Makefile
-                 postprocessing/timavg/Makefile
-                 tools/libfrencutils/Makefile
-                 tools/check_mask/Makefile
-                 tools/cubic_utils/Makefile
-                 tools/fregrid/Makefile
-                 tools/make_coupler_mosaic/Makefile
-                 tools/make_hgrid/Makefile
-                 tools/make_land_domain/Makefile
-                 tools/make_quick_mosaic/Makefile
-                 tools/make_regional_mosaic/Makefile
-                 tools/make_solo_mosaic/Makefile
-                 tools/make_topog/Makefile
-                 tools/make_vgrid/Makefile
-                 tools/mppncscatter/Makefile
-                 tools/ncexists/Makefile
-                 tools/nc_null_check/Makefile
-                 tools/remap_land/Makefile
-                 tools/river_regrid/Makefile
-                 tools/runoff_regrid/Makefile
-                 tools/transfer_to_mosaic_grid/Makefile
-                 t/Makefile
+                 lib/Makefile
+                 man/Makefile
+                 src/Makefile
+                 tests/Makefile
                  tools/simple_hydrog/Makefile
                  tools/simple_hydrog/postp/Makefile
                  tools/simple_hydrog/lakes/Makefile
                  tools/simple_hydrog/rmvpr/Makefile
-                 tools/simple_hydrog/libfmslite/Makefile
 ])
+
 AC_OUTPUT
